@@ -1,9 +1,12 @@
 import numpy as np
+import numpy.random as rand
 
-
+X_MIN, X_MAX = 0, 1000
+Y_MIN, Y_MAX = 0, 1000
 
 MAX_POINTS = 5000
 MAX_BOUNDS = 5000
+
 fname = "NONE"
 
 class Node():
@@ -44,7 +47,9 @@ class RRT():
         return cp, dist
 
     def next(self):
-        pass
+        x = rand.uniform(X_MIN, X_MAX)
+        y = rand.uniform(Y_MIN, Y_MAX)
+
 
 class Boundaries():
     def __init__():
