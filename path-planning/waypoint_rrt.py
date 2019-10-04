@@ -97,7 +97,7 @@ class Boundaries():
         intersect = np.cross(self.edge_list[ : self.index], line_tile, 1, 1)
         intersect_euclid = intersect[ : 2] / intersect[2]
 
-        intersection_coord = (intersect_euclid * self.edge_type[ : self.index])[intersection_coord != 0]
+        intersection_coord = intersect_euclid[self.edge_type[ : self.index] != 0]
 
         out_bound = (intersection_coord > self.bound_list[ : self.index , 0]) & (intersection_coord < self.bound_list[ : self.index , 1])
 
