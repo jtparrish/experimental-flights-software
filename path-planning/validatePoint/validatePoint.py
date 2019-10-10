@@ -20,11 +20,12 @@ class Node():
 class BoundaryBox():
     # Describes the x and y coordinates of the boundary
     # that shouldn't be crossed
-    def __init__(self, point1, point2):
+    def __init__(self, point1, point2, label):
         #1 is left and bottom boundary
         #2 is right and top boundary
         self.point1 = point1
         self.point2 = point2
+        self.label = label
 
     def validPoint(self, testPoint): #Checks if point is valid
         xNonValidity = (self.point1.x <= testPoint.x) and (self.point2.x >= testPoint.x)
@@ -106,12 +107,15 @@ def main():
         csvReader = csv.reader(csvfile)
         #Format of csv: First two values are x1, y1 (Bottom left)
         #Second two values are x2, y2 (Top right)
+        #Last value is a label
         for row in csvReader:
             Point1 = Point(float(row[0]), float(row[1]))
             Point2 = Point(float(row[2]), float(row[3]))
-            boundaryRegion = BoundaryBox(Point1, Point2)
+            boundaryRegion = BoundaryBox(Point1, Point2, row[4])
             boundaryList.append(boundaryRegion)
     #Below is just a placeholder until can play with tree structure and fix from there
+    print("What boundary box conditions are valid?")
+    conditions = [str(x) for x in input().split()]
     with open('testPoints.csv', encoding='utf-8-sig') as csvfileb: #Change csv file name as required
         csvReader2 = csv.reader(csvfileb)
         #Current point and next point on same row
@@ -121,6 +125,8 @@ def main():
             nextPoint = Point(float(row[2]), float(row[3]))
             valid = True
             for box in boundaryList:
+                if (not(box.label in conditions)):
+                    continue
                 if (box.validPoint(testPoint) and box.validPoint(nextPoint)):
                     if (not(box.validLine(testPoint, nextPoint))):
                         valid = False
