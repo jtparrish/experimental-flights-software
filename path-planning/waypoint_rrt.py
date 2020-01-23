@@ -112,7 +112,6 @@ class Boundaries():
         self.bound_list = np.zeros((self.MAX_EDGES, 2))
         self.edge_type = np.zeros((self.MAX_EDGES, 2))
         self.index = 0
-        self.dflag = False
 
     def add_bound(self, p0, p2):
 
@@ -165,14 +164,15 @@ class Boundaries():
         t1 = (intersection_coord > self.bound_list[ : self.index , 0])
         t2 = (intersection_coord < self.bound_list[ : self.index , 1])
 
-        out_bound = ((intersection_coord > segment_bounds[ : , 0]) & (intersection_coord < segment_bounds[ : , 1]) &
-                    (intersection_coord > self.bound_list[ : self.index , 0]) & (intersection_coord < self.bound_list[ : self.index , 1]))
+        out_bound = ((intersection_coord > segment_bounds[ : , 0])
+                    & (intersection_coord < segment_bounds[ : , 1])
+                    & (intersection_coord > self.bound_list[ : self.index , 0])
+                    & (intersection_coord < self.bound_list[ : self.index , 1]))
 
         return np.any(out_bound)
 
     def __call__(self, node):
         return not self.check_out_bound(node)
-
 
 def convert_to_proj(p):
     return p + (1,)
