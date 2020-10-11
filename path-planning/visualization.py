@@ -12,10 +12,14 @@ class RRTvis():
 
     def plot_all(self):
         try:
+            # run rrt
             self.rrt()
+            # extract the path from the rrt
             path = self.rrt.extract_path()
+            # extract the path segment from the last point to the goal
             goal_seg = np.array((self.rrt.goal.prev.as_tuple(), self.rrt.goal.as_tuple())).reshape(1, 2, 2)
         except(ExceededMaxPointsException):
+            # rrt failed to generate a path within the maximum number of points
             print("RIP")
             path = []
             goal_seg = np.array([], dtype=np.int64).reshape(0, 2, 2)
