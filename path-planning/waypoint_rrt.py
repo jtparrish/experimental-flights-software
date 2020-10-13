@@ -169,6 +169,7 @@ class RRT():
 # class representing a collection of rectangular boundary regions in the arena
 class Boundaries():
     def __init__(self):
+        self.point_list = np.zeros((MAX_BOUNDS, 2, 2))
         # set the maximum number of edges
         self.MAX_EDGES = 4 * MAX_BOUNDS
         # generate an array of edge lines in projective representation
@@ -189,6 +190,8 @@ class Boundaries():
         + p2 the upper right corner of the rectangle
         """
 
+        self.point_list[self.index // 4] = [p0, p2]
+
         # get the four corners of the rectangle
         points = [p0, (p2[0], p0[1]), p2, (p0[0], p2[1])]
 
@@ -208,6 +211,9 @@ class Boundaries():
             self.edge_type[self.index] = np.array([(1 - i % 2), (i % 2)])
             # increment the index for the next edge
             self.index += 1
+
+    def get_points(self):
+        return self.point_list[ : self.index // 4]
 
     def check_out_bound(self, node):
         """

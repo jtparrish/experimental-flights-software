@@ -5,6 +5,7 @@ def main():
     bounds = wp.Boundaries()
     bounds.add_bound((250,500), (500, 0))
     bounds.add_bound((0, 1000), (500, 550))
+    print(bounds.get_points())
     start = (1, 1)
     goal = (999, 999)
     thresh = 100
