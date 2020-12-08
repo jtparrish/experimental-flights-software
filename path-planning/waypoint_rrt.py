@@ -10,7 +10,7 @@ MAX_POINTS = 5000
 # maximum number of boundary regions
 MAX_BOUNDS = 5000
 
-fname = "NONE"
+# fname = "NONE"
 
 # class to store a tree node
 ## stores its coordinates as well as a reference to the previous node
@@ -186,8 +186,6 @@ class RRT():
         # the index for the original path
         i = 0
 
-        # print(N)
-
         # loop until we have connected the goal (i = N-1)
         while i < N - 1:
             # initialize the previous node to the current node indicated by i
@@ -211,8 +209,6 @@ class RRT():
                     # break out of the for loop
                     break
 
-        # print(new_path[ : i_prime])
-
         # return the new path which is only valid up to i_prime
         ## (the rest was not used)
         return new_path[ : i_prime]
@@ -223,6 +219,7 @@ class RRT():
 # class representing a collection of rectangular boundary regions in the arena
 class Boundaries():
     def __init__(self):
+        # make space for the points to be stored so they can be displayed later
         self.point_list = np.zeros((MAX_BOUNDS, 2, 2))
         # set the maximum number of edges
         self.MAX_EDGES = 4 * MAX_BOUNDS
@@ -307,23 +304,31 @@ class Boundaries():
         # extract the pertinent intersection coordinate for each edge (x for hotizontal edges, y for vertical edges)
         intersection_coord = intersect_euclid[self.edge_type[ : self.index] != 0]
 
-        # 
+        # for each edge extract the pertinent coordinate from the original node's location (x for hotizontal edges, y for vertical edges)
         orig_point_coord = np.tile(cart_point.reshape(1, 2), (self.index, 1))[self.edge_type[ : self.index] != 0].reshape(self.index, 1)
+        # for each edge extract the pertinent coordinate from the previous node's location (x for hotizontal edges, y for vertical edges)
         prev_point_coord = np.tile(cart_point.reshape(1, 2), (self.index, 1))[self.edge_type[ : self.index] != 0].reshape(self.index, 1)
 
+        # sort the pertinent coordinates of the two nodes, giving a range over which the segment exists
         segment_bounds = np.sort(np.concatenate((orig_point_coord, prev_point_coord), axis=1), axis=1)
 
-        t1 = (intersection_coord > self.bound_list[ : self.index , 0])
-        t2 = (intersection_coord < self.bound_list[ : self.index , 1])
-
+        # the path between the nodes is out of bounds if the intersection between the two lines
+        ## lies on the path segment and on the segment that makes up the actual edge of the rectangle
+        ## for a horizontal edge this looks like:
+        #### segment_left.x < intersection.x < segment_right.x &&
+        #### edge_left.x < intersection.x < edge_right.x
         out_bound = ((intersection_coord > segment_bounds[ : , 0])
                     & (intersection_coord < segment_bounds[ : , 1])
                     & (intersection_coord > self.bound_list[ : self.index , 0])
                     & (intersection_coord < self.bound_list[ : self.index , 1]))
 
+        # if the path between nodes crosses any of the boundary edges, then the path is out of bounds
         return np.any(out_bound)
 
     def __call__(self, node):
+        """
+        check if the path from the node's previous to the node is in bounds
+        """
         return not self.check_out_bound(node)
 
 def convert_to_proj(p):
@@ -345,6 +350,3 @@ class ExceededMaxPointsException(Exception):
     and failed to connect the origin to the goal
     """
     pass
-
-# def debug_bounds(node):
-#     return (250 < node.x and node.x < 500 and 0 < node.y and node.y < 250)
