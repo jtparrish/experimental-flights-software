@@ -164,7 +164,61 @@ class RRT():
 
         # flip the coordinates so that the first segment is (start, x) and the last is (y goal)
         path_coords = np.flip(path_coords[ : i], axis=0)
-        return path_coords
+        # smooth the path before returning it
+        return self.smooth(path_coords)
+
+    def smooth(self, path):
+        """
+        takes an RRT path an attempts to smooth it by using a heuristic that ammounts to
+        "travel as far as you can along the path each step". This helps cut out the jaggedness,
+        particularly when the path runs through open space. If there are no obstacles in the way,
+        this smoother will result in a direct path to the goal. Otherwise the path it returns
+        is likely suboptimal, but typically much better than the raw path.
+        """
+
+        # generate the new path
+        new_path = np.zeros(path.shape)
+        # save the number of points in the original path
+        N = path.shape[0]
+
+        # the index for the modified path
+        i_prime = 0
+        # the index for the original path
+        i = 0
+
+        # print(N)
+
+        # loop until we have connected the goal (i = N-1)
+        while i < N - 1:
+            # initialize the previous node to the current node indicated by i
+            prev_node = Node(path[i][0][0], path[i][0][1], None)
+            # iterate backwards from the goal attempting a connection
+            for j in reversed(range(i, N)):
+                # get the node at destination node of segment j and set the origin of segment i as its previous
+                ## thus we are attmepting to skip segments i through j and replace them with a direct connection
+                node = Node(path[j][1][0], path[j][1][1], prev_node)
+                # check if the two nodes can be directly connected
+                if self.bounds(node):
+                    # set the previous node for this leg in the new path
+                    new_path[i_prime][0] = path[i][0]
+                    # set the destination node for this leg in the new path
+                    new_path[i_prime][1] = path[j][1]
+                    # increment to set the next leg in the new path
+                    i_prime += 1
+                    # increment the start of the next segment to the segment originating at the destination of the segment
+                    ## just added to the new path
+                    i = j+1
+                    # break out of the for loop
+                    break
+
+        # print(new_path[ : i_prime])
+
+        # return the new path which is only valid up to i_prime
+        ## (the rest was not used)
+        return new_path[ : i_prime]
+
+
+                
 
 # class representing a collection of rectangular boundary regions in the arena
 class Boundaries():
@@ -213,6 +267,15 @@ class Boundaries():
             self.index += 1
 
     def get_points(self):
+        """
+        return the array of corner points for the rectangles in the boundary object
+        
+        each element of the array represents a rectangle and has the form
+        [
+            [upper_left.x, upper_left.y],
+            [lower_right.x, lower_riht.y]
+        ]
+        """
         return self.point_list[ : self.index // 4]
 
     def check_out_bound(self, node):
@@ -220,23 +283,33 @@ class Boundaries():
         check if the path between the given node and the nodes previous node goes through any of the bounding boxes
         """
         
-        euclid_point = np.array(node.as_tuple())
-        euclid_prev_point = np.array(node.prev.as_tuple())
+        # get the node as an np array of cartesian coordinates
+        cart_point = np.array(node.as_tuple())
+        # get the previous node as an np array of cartesian coordinates
+        cart_point = np.array(node.prev.as_tuple())
 
+        # get the node as an np array of projective coordinates
         proj_point = np.array(convert_to_proj(node.as_tuple()))
+        # get the previous node as an np array of projective coordinates
         proj_prev_point = np.array(convert_to_proj(node.prev.as_tuple()))
 
+        # get the projective representation of the line between the two points
         line = np.cross(proj_point, proj_prev_point)
 
+        # tile the line for SIMD computation with each edge 
         line_tile = np.tile(line.reshape(1, 3), (self.index, 1))
 
+        # compute the intersection between the line between the two points and each edge in projective coordinates 
         intersect = np.cross(self.edge_list[ : self.index], line_tile, 1, 1)
+        # convert to euclidean intersection
         intersect_euclid = intersect[ : , : 2] / np.tile(intersect[ : , 2].reshape(self.index, 1), (1, 2))
 
+        # extract the pertinent intersection coordinate for each edge (x for hotizontal edges, y for vertical edges)
         intersection_coord = intersect_euclid[self.edge_type[ : self.index] != 0]
 
-        orig_point_coord = np.tile(euclid_point.reshape(1, 2), (self.index, 1))[self.edge_type[ : self.index] != 0].reshape(self.index, 1)
-        prev_point_coord = np.tile(euclid_prev_point.reshape(1, 2), (self.index, 1))[self.edge_type[ : self.index] != 0].reshape(self.index, 1)
+        # 
+        orig_point_coord = np.tile(cart_point.reshape(1, 2), (self.index, 1))[self.edge_type[ : self.index] != 0].reshape(self.index, 1)
+        prev_point_coord = np.tile(cart_point.reshape(1, 2), (self.index, 1))[self.edge_type[ : self.index] != 0].reshape(self.index, 1)
 
         segment_bounds = np.sort(np.concatenate((orig_point_coord, prev_point_coord), axis=1), axis=1)
 
@@ -254,13 +327,24 @@ class Boundaries():
         return not self.check_out_bound(node)
 
 def convert_to_proj(p):
+    """
+    helper function to convert a cartesian point p (passed as a tuple (x, y)) into
+    an equivalent point in homogenous coordinates (a tuple (x, y, 1))
+    """
     return p + (1,)
 
 def dist(n1, n2):
+    """
+    return the euclidean distance between two euclidean points (represented as node objects)
+    """
     return ((n2.x - n1.x) ** 2 + (n2.y - n1.y) ** 2) ** (1/2)
 
 class ExceededMaxPointsException(Exception):
+    """
+    exception class signaling that the RRT process exceeded the maximum number of exploratory points specified
+    and failed to connect the origin to the goal
+    """
     pass
 
-def debug_bounds(node):
-    return (250 < node.x and node.x < 500 and 0 < node.y and node.y < 250)
+# def debug_bounds(node):
+#     return (250 < node.x and node.x < 500 and 0 < node.y and node.y < 250)
