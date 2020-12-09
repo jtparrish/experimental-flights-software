@@ -2,8 +2,8 @@ import numpy as np
 import numpy.random as rand
 
 # bounds for the overall arena
-X_MIN, X_MAX = 0, 1000
-Y_MIN, Y_MAX = 0, 1000
+X_MIN, X_MAX = 0, 1325
+Y_MIN, Y_MAX = 0, 1050
 
 # maximum number of points
 MAX_POINTS = 5000
