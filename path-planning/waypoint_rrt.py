@@ -223,7 +223,7 @@ class Boundaries():
         self.point_list = np.zeros((MAX_BOUNDS, 2, 2))
         # set the maximum number of edges
         self.MAX_EDGES = 4 * MAX_BOUNDS
-        # generate an array of edge lines in projective representation
+        # generate an array of edge lines in homogenous representation
         self.edge_list = np.zeros((self.MAX_EDGES, 3))
         # generate an array of bounding values for each of the edges
         ## (edges will be vertical or horizontal so we only need one number for each bound)
@@ -246,11 +246,11 @@ class Boundaries():
         # get the four corners of the rectangle
         points = [p0, (p2[0], p0[1]), p2, (p0[0], p2[1])]
 
-        # get the four corners of the rectangle in projective form
-        proj_points = [convert_to_proj(p) for p in points]
+        # get the four corners of the rectangle in homogenous form
+        hom_points = [convert_to_hom(p) for p in points]
 
-        # get the four edges in projective coordinates
-        edges = [np.cross(np.array(proj_points[i % 4]), np.array(proj_points[(i + 1) % 4])) for i in range(4)]  ##CAREFUL OF MAGIC NUMBER
+        # get the four edges in homogenous coordinates
+        edges = [np.cross(np.array(hom_points[i % 4]), np.array(hom_points[(i + 1) % 4])) for i in range(4)]  ##CAREFUL OF MAGIC NUMBER
 
         # add the edges to the various registration lists
         for i, edge in enumerate(edges):
@@ -283,31 +283,31 @@ class Boundaries():
         # get the node as an np array of cartesian coordinates
         cart_point = np.array(node.as_tuple())
         # get the previous node as an np array of cartesian coordinates
-        cart_point = np.array(node.prev.as_tuple())
+        cart_prev_point = np.array(node.prev.as_tuple())
 
-        # get the node as an np array of projective coordinates
-        proj_point = np.array(convert_to_proj(node.as_tuple()))
-        # get the previous node as an np array of projective coordinates
-        proj_prev_point = np.array(convert_to_proj(node.prev.as_tuple()))
+        # get the node as an np array of homogenous coordinates
+        hom_point = np.array(convert_to_hom(node.as_tuple()))
+        # get the previous node as an np array of homogenous coordinates
+        hom_prev_point = np.array(convert_to_hom(node.prev.as_tuple()))
 
-        # get the projective representation of the line between the two points
-        line = np.cross(proj_point, proj_prev_point)
+        # get the homogenous representation of the line between the two points
+        line = np.cross(hom_point, hom_prev_point)
 
         # tile the line for SIMD computation with each edge 
         line_tile = np.tile(line.reshape(1, 3), (self.index, 1))
 
-        # compute the intersection between the line between the two points and each edge in projective coordinates 
+        # compute the intersection between the line between the two points and each edge in homogenous coordinates 
         intersect = np.cross(self.edge_list[ : self.index], line_tile, 1, 1)
         # convert to euclidean intersection
-        intersect_euclid = intersect[ : , : 2] / np.tile(intersect[ : , 2].reshape(self.index, 1), (1, 2))
+        intersect_cart = intersect[ : , : 2] / np.tile(intersect[ : , 2].reshape(self.index, 1), (1, 2))
 
         # extract the pertinent intersection coordinate for each edge (x for hotizontal edges, y for vertical edges)
-        intersection_coord = intersect_euclid[self.edge_type[ : self.index] != 0]
+        intersection_coord = intersect_cart[self.edge_type[ : self.index] != 0]
 
         # for each edge extract the pertinent coordinate from the original node's location (x for hotizontal edges, y for vertical edges)
         orig_point_coord = np.tile(cart_point.reshape(1, 2), (self.index, 1))[self.edge_type[ : self.index] != 0].reshape(self.index, 1)
         # for each edge extract the pertinent coordinate from the previous node's location (x for hotizontal edges, y for vertical edges)
-        prev_point_coord = np.tile(cart_point.reshape(1, 2), (self.index, 1))[self.edge_type[ : self.index] != 0].reshape(self.index, 1)
+        prev_point_coord = np.tile(cart_prev_point.reshape(1, 2), (self.index, 1))[self.edge_type[ : self.index] != 0].reshape(self.index, 1)
 
         # sort the pertinent coordinates of the two nodes, giving a range over which the segment exists
         segment_bounds = np.sort(np.concatenate((orig_point_coord, prev_point_coord), axis=1), axis=1)
@@ -331,7 +331,7 @@ class Boundaries():
         """
         return not self.check_out_bound(node)
 
-def convert_to_proj(p):
+def convert_to_hom(p):
     """
     helper function to convert a cartesian point p (passed as a tuple (x, y)) into
     an equivalent point in homogenous coordinates (a tuple (x, y, 1))
